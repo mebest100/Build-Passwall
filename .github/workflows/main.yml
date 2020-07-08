@@ -47,9 +47,7 @@ jobs:
     
     - name: Custom configure file
       run: |
-          cd openwrt
-          rm -f .config
-          cp ../x64-master .config
+          \cp x64-master  openwrt/.config
           
     - name: Make Defconfig
       run: |
