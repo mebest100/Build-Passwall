@@ -5,24 +5,25 @@
 # Author: P3TERX
 # Blog: https://p3terx.com
 #=================================================
-name: X64-1907
+name: X64-master
 
 on:
-  schedule:
-    - cron: 0 20 * * *
-#  push:
-#    branches: 
-#      - master
+  watch:
+    types: [started]
+
+
+
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
     - name: Initialization environment
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
+          docker rmi `docker images -q`
           sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/apt/sources.list.d
           sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
           sudo -E apt-get -qq update
@@ -34,13 +35,9 @@ jobs:
     - name: Clone source code
       env: 
         REPO_URL: https://github.com/Lienol/openwrt
-        REPO_BRANCH: dev-19.07
+        REPO_BRANCH: dev-master
       run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
       
-    - name: Clone Config
-      env: 
-        REPO_URL: https://github.com/Lienol/openwrt-actions
-      run: git clone --depth 1 $REPO_URL openwrt-config
       
     - name: Update feeds
       run: cd openwrt && ./scripts/feeds update -a
@@ -52,7 +49,7 @@ jobs:
       run: |
           cd openwrt
           rm -f .config
-          cp ../openwrt-config/x64-1907 .config
+          cp ../x64-master .config
           
     - name: Make Defconfig
       run: |
@@ -78,15 +75,21 @@ jobs:
           cd openwrt
           make -j1 V=s
 
-    - name: Assemble artifact
-      run: |
-          rm -rf ./artifact/
-          mkdir -p ./artifact/
-          find openwrt/bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
-          find openwrt/bin/targets/ -name "*combined*img*" | xargs -i mv -f {} ./artifact/
+ 
+    - name: Prepare artifact
+      run: find ./openwrt/bin/targets/ -type d -name "packages" | xargs rm -rf {}
 
-    - name: Upload artifact
+    - name: Upload firmware
       uses: actions/upload-artifact@master
       with:
-        name: OpenWrt firmware
-        path: ./artifact/
+        name: OpenWrt_Firmware
+        path: ./openwrt/bin/targets/
+
+    - name: Upload ipk
+      uses: actions/upload-artifact@master
+      with:
+        name: OpenWrt_IPK
+        path: ./openwrt/bin/packages/
+
+
+
